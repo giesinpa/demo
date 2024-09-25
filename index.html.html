@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Pomodoro Timer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+        :root {
+            --bg-color: #1a1a2e;
+            --card-color: #16213e;
+            --accent-color: #0f3460;
+            --text-color: #e94560;
+            --light-text: #f1f1f1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--light-text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            background-color: var(--card-color);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .tomato {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .timer {
+            font-size: 4rem;
+            font-weight: 600;
+            margin: 1rem 0;
+            color: var(--text-color);
+            text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .btn {
+            background-color: var(--accent-color);
+            color: var(--light-text);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--text-color);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .status {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        .progress-ring__circle {
+            transition: 0.35s stroke-dashoffset;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tomato">🍅</div>
+        <svg class="progress-ring" width="300" height="300">
+            <circle class="progress-ring__circle" stroke="var(--text-color)" stroke-width="8" fill="transparent" r="140" cx="150" cy="150"/>
+        </svg>
+        <div class="timer" id="timer">25:00</div>
+        <div class="status" id="status">Focus Time</div>
+        <div class="controls">
+            <button class="btn" id="startBtn">Start</button>
+            <button class="btn" id="resetBtn">Reset</button>
+        </div>
+        <div id="cycles">Cycles: 0</div>
+    </div>
+
+    <script>
+        const timer = document.getElementById('timer');
+        const status = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const cycles = document.getElementById('cycles');
+        const progressRing = document.querySelector('.progress-ring__circle');
+
+        let time = 25 * 60;
+        let isRunning = false;
+        let isBreak = false;
+        let cycleCount = 0;
+        let interval;
+
+        const radius = progressRing.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+        progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressRing.style.strokeDashoffset = circumference;
+
+        function setProgress(percent) {
+            const offset = circumference - percent / 100 * circumference;
+            progressRing.style.strokeDashoffset = offset;
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        function updateDisplay() {
+            timer.textContent = formatTime(time);
+            status.textContent = isBreak ? 'Break Time' : 'Focus Time';
+            cycles.textContent = `Cycles: ${cycleCount}`;
+            const totalTime = isBreak ? 5 * 60 : 25 * 60;
+            const progress = ((totalTime - time) / totalTime) * 100;
+            setProgress(progress);
+        }
+
+        function toggleTimer() {
+            isRunning = !isRunning;
+            if (isRunning) {
+                startBtn.textContent = 'Pause';
+                timer.classList.add('pulse');
+                interval = setInterval(() => {
+                    time--;
+                    if (time === 0) {
+                        clearInterval(interval);
+                        playBell();
+                        if (isBreak) {
+                            time = 25 * 60;
+                            isBreak = false;
+                            cycleCount++;
+                        } else {
+                            time = 5 * 60;
+                            isBreak = true;
+                        }
+                        isRunning = false;
+                        startBtn.textContent = 'Start';
+                        timer.classList.remove('pulse');
+                    }
+                    updateDisplay();
+                }, 1000);
+            } else {
+                clearInterval(interval);
+                startBtn.textContent = 'Resume';
+                timer.classList.remove('pulse');
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(interval);
+            time = 25 * 60;
+            isRunning = false;
+            isBreak = false;
+            startBtn.textContent = 'Start';
+            timer.classList.remove('pulse');
+            updateDisplay();
+        }
+
+        function playBell() {
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3');
+            audio.play();
+        }
+
+        startBtn.addEventListener('click', toggleTimer);
+        resetBtn.addEventListener('click', resetTimer);
+
+        updateDisplay();
+    </script>
+</body>
+</html>
